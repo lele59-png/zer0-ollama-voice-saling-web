@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ollama Voice Bot</title>
+<style>
+:root {
+  --bg: #0A0A0A;
+  --bg-card: #111111;
+  --accent: #DC2626;
+  --accent-hover: #B91C1C;
+  --text: #FFFFFF;
+  --text-muted: #A3A3A3;
+  --border: #262626;
+  --success: #10B981;
+  --error: #EF4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navigation */
+nav {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 10px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn.active {
+  color: var(--accent);
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.nav-btn:hover {
+  color: var(--text);
+}
+
+/* Main Content */
+main {
+  flex: 1;
+  padding: 20px 15px;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.page {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.page.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  color: var(--text);
+}
+
+/* Buttons */
+.btn {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background-color: var(--border);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.error-msg {
+  color: var(--error);
+  font-size: 0.8rem;
+  margin-top: 5px;
+  display: none;
+}
+
+/* Chat */
+.chat-container {
+  height: 50vh;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: var(--accent);
+  color: white;
+}
+
+.message.ai {
+  align-self: flex-start;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.message.error {
+  align-self: center;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+/* Status */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 15px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--error);
+}
+
+.status-dot.online {
+  background-color: var(--success);
+}
+
+/* Mic Button */
+.mic-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: all 0.2s;
+}
+
+.mic-btn.recording {
+  background-color: var(--accent-hover);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* Loading */
+.loader {
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state svg {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+/* Settings */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.toggle {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  background-color: var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.toggle.active {
+  background-color: var(--accent);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle.active::after {
+  transform: translateX(22px);
+}
+
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+      <line x1="12" y1="19" x2="12" y2="23"></line>
+      <line x1="8" y1="23" x2="16" y2="23"></line>
+    </svg>
+    Ollama Voice
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" data-page="home">Beranda</button>
+    <button class="nav-btn" data-page="settings">Tetapan</button>
+    <button class="nav-btn" data-page="about">Tentang</button>
+  </div>
+</nav>
+
+<main>
+  <!-- Home Page -->
+  <div id="page-home" class="page active">
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Menyemak pelayan Ollama...</span>
+    </div>
+    
+    <div class="card">
+      <h2>Percakapan</h2>
+      <div class="chat-container" id="chat-container">
+        <div class="empty-state" id="chat-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <p>Mulakan percakapan dengan AI</p>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <input type="text" id="chat-input" placeholder="Taip mesej..." style="flex: 1;">
+        <button class="btn" id="send-btn">Hantar</button>
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="mic-btn" id="mic-btn" title="Rekod suara">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">Tekan untuk bercakap</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Page -->
+  <div id="page-settings" class="page">
+    <div class="card">
+      <h2>Tetapan</h2>
+      <div class="form-group">
+        <label for="ollama-url">URL Pelayan Ollama</label>
+        <input type="url" id="ollama-url" placeholder="http://localhost:11434">
+        <div class="error-msg" id="url-error">URL tidak sah</div>
+      </div>
+      <div class="form-group">
+        <label for="model-select">Model</label>
+        <select id="model-select">
+          <option value="llama3">Llama 3</option>
+          <option value="mistral">Mistral</option>
+          <option value="phi3">Phi 3</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <span>Ucapkan Jawapan</span>
+        <div class="toggle active" id="tts-toggle"></div>
+      </div>
+      <div class="setting-item">
+        <span>Rekod Suara</span>
+        <div class="toggle active" id="stt-toggle"></div>
+      </div>
+      <button class="btn btn-full" id="save-settings">Simpan Tetapan</button>
+    </div>
+    
+    <div class="card">
+      <h2>Data</h2>
+      <button class="btn btn-secondary btn-full" id="export-data">Eksport Data</button>
+      <button class="btn btn-secondary btn-full" id="clear-data" style="margin-top: 10px; color: var(--error);">Padam Semua Data</button>
+    </div>
+  </div>
+
+  <!-- About Page -->
+  <div id="page-about" class="page">
+    <div class="card">
+      <h2>Tentang</h2>
+      <p style="color: var(--text-muted); margin-bottom: 15px;">
+        Ollama Voice Bot ialah aplikasi web yang membolehkan anda bercakap dengan AI menggunakan suara.
+      </p>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">
+        Versi: 1.0.0<br>
+        Dibina dengan HTML5, CSS3, dan JavaScript
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+// State
+let settings = {
+  ollamaUrl: 'http://localhost:11434',
+  model: 'llama3',
+  ttsEnabled: true,
+  sttEnabled: true
+};
+
+let chatHistory = [];
+let isRecording = false;
+let recognition = null;
+let isOnline = false;
+
+// DOM Elements
+const pages = document.querySelectorAll('.page');
+const navBtns = document.querySelectorAll('.nav-btn');
+const chatContainer = document.getElementById('chat-container');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const micBtn = document.getElementById('mic-btn');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const chatEmpty = document.getElementById('chat-empty');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  loadChatHistory();
+  checkOllamaStatus();
+  setupNavigation();
+  setupChat();
+  setupVoice();
+  setupSettings();
+});
+
+// Navigation
+function setupNavigation() {
+  navBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      navBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      pages.forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+    });
+  });
+}
+
+// Settings
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('ollama-voice-settings');
+    if (saved) settings = JSON.parse(saved);
+    document.getElementById('ollama-url').value = settings.ollamaUrl;
+    document.getElementById('model-select').value = settings.model;
+    document.getElementById('tts-toggle').classList.toggle('active', settings.ttsEnabled);
+    document.getElementById('stt-toggle').classList.toggle('active', settings.sttEnabled);
+  } catch (e) {
+    console.error('Failed to load settings:', e);
+  }
+}
+
+function saveSettings() {
+  try {
+    const url = document.getElementById('ollama-url').value;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      document.getElementById('url-error').style.display = 'block';
+      return;
+    }
+    document.getElementById('url-error').style.display = 'none';
+    
+    settings.ollamaUrl = url;
+    settings.model = document.getElementById('model-select').value;
+    settings.ttsEnabled = document.getElementById('tts-toggle').classList.contains('active');
+    settings.sttEnabled = document.getElementById('stt-toggle').classList.contains('active');
+    
+    localStorage.setItem('ollama-voice-settings', JSON.stringify(settings));
+    checkOllamaStatus();
+    alert('Tetapan disimpan!');
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+    alert('Gagal menyimpan tetapan');
+  }
+}
+
+function setupSettings() {
+  document.getElementById('save-settings').addEventListener('click', saveSettings);
+  
+  document.getElementById('tts-toggle').addEventListener('click', function() {
+    this.classList.toggle('active');
+  });
+  
+  document.getElementById('stt-toggle').addEventListener('click', function() {
+    this.classList.toggle('active');
+  });
+  
+  document.getElementById('export-data').addEventListener('click', exportData);
+  document.getElementById('clear-data').addEventListener('click', clearData);
+}
+
+// Chat History
+function loadChatHistory() {
+  try {
+    const saved = localStorage.getItem('ollama-voice-chat');
+    if (saved) {
+      chatHistory = JSON.parse(saved);
+      renderChat();
+    }
+  } catch (e) {
+    console.error('Failed to load chat:', e);
+  }
+}
+
+function saveChatHistory() {
+  try {
+    localStorage.setItem('ollama-voice-chat', JSON.stringify(chatHistory));
+  } catch (e) {
+    console.error('Failed to save chat:', e);
+  }
+}
+
+function renderChat() {
+  chatContainer.innerHTML = '';
+  if (chatHistory.length === 0) {
+    chatContainer.innerHTML = `
+      <div class="empty-state" id="chat-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <p>Mulakan percakapan dengan AI</p>
+      </div>
+    `;
+    return;
+  }
+  
+  chatHistory.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `message ${msg.role}`;
+    div.textContent = msg.content;
+    chatContainer.appendChild(div);
+  });
+  
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function addMessage(role, content) {
+  chatHistory.push({ role, content, timestamp: Date.now() });
+  saveChatHistory();
+  renderChat();
+}
+
+// Ollama Status
+async function checkOllamaStatus() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    
+    const response = await fetch(`${settings.ollamaUrl}/api/tags`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    
+    if (response.ok) {
+      isOnline = true;
+      statusDot.classList.add('online');
+      statusText.textContent = 'Pelayan Ollama dalam talian';
+    } else {
+      throw new Error('Bad response');
+    }
+  } catch (e) {
+    isOnline = false;
+    statusDot.classList.remove('online');
+    statusText.textContent = 'Pelayan Ollama luar talian';
+  }
+}
+
+// Chat
+function setupChat() {
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+}
+
+async function sendMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  
+  chatInput.value = '';
+  addMessage('user', text);
+  
+  if (!isOnline) {
+    addMessage('error', 'Pelayan Ollama tidak tersedia. Sila semak tetapan.');
+    return;
+  }
+  
+  sendBtn.disabled = true;
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'loader';
+  chatContainer.appendChild(loadingDiv);
+  
+  try {
+    const response = await fetch(`${settings.ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: chatHistory.filter(m => m.role !== 'error').map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.content
+        })),
+        stream: false
+      })
+    });
+    
+    const data = await response.json();
+    const aiResponse = data.message?.content || 'Maaf, saya tidak dapat memahami soalan anda.';
+    addMessage('ai', aiResponse);
+    
+    if (settings.ttsEnabled) {
+      speakText(aiResponse);
+    }
+  } catch (e) {
+    console.error('Chat error:', e);
+    addMessage('error', 'Ralat: Gagal menghubungi pelayan Ollama.');
+  } finally {
+    loadingDiv.remove();
+    sendBtn.disabled = false;
+  }
+}
+
+// Voice
+function setupVoice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    micBtn.style.display = 'none';
+    return;
+  }
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ms-MY';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    chatInput.value = transcript;
+    sendMessage();
+  };
+  
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    addMessage('error', `Ralat suara: ${event.error}`);
+    stopRecording();
+  };
+  
+  recognition.onend = () => {
+    stopRecording();
+  };
+  
+  micBtn.addEventListener('click', toggleRecording);
+}
+
+function toggleRecording() {
+  if (!settings.sttEnabled) {
+    alert('Rekod suara telah dimatikan dalam tetapan.');
+    return;
+  }
+  
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  if (!recognition) return;
+  isRecording = true;
+  micBtn.classList.add('recording');
+  recognition.start();
+}
+
+function stopRecording() {
+  isRecording = false;
+  micBtn.classList.remove('recording');
+  if (recognition) recognition.stop();
+}
+
+function speakText(text) {
+  if (!('speechSynthesis' in window)) return;
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ms-MY';
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  
+  window.speechSynthesis.speak(utterance);
+}
+
+// Data Management
+function exportData() {
+  const data = {
+    settings: settings,
+    chatHistory: chatHistory,
+    exportDate: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ollama-voice-backup-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearData() {
+  if (confirm('Adakah anda pasti mahu memadam semua data?')) {
+    try {
+      localStorage.removeItem('ollama-voice-settings');
+      localStorage.removeItem('ollama-voice-chat');
+      chatHistory = [];
+      renderChat();
+      alert('Data telah dipadam.');
+    } catch (e) {
+      console.error('Failed to clear data:', e);
+      alert('Gagal memadam data.');
+    }
+  }
+}
+</script>
+</body>
+</html>
