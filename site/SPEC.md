@@ -107,3 +107,7 @@
 | 98 | Butang hantar | ✅ |
 | 99 | Butang henti | ✅ |
 | 100 | Butang padam | ✅ |
+## Analisis kekurangan (2026-11-19 05:54)
+1) Tiada fail JavaScript/CSS untuk UI → Tambah fail JS & CSS yang mengendalikan semua butang, animasi, tema, dan responsif.
+2) Web Speech API tidak diimplementasikan (speech recognition & synthesis) → Tambahkan kod untuk mengakses API suara dan sambungkan dengan chat.
+3) Tiada sokongan offline (service worker, aset lokal) → Sediakan service worker dan pastikan semua
